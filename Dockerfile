@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:0
-
 FROM node:lts-alpine
 WORKDIR /app
 COPY . .
