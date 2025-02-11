@@ -5,5 +5,5 @@ jobs:
     runs-on: ubuntu-latest
     steps:
      - run: ls
-     # - checkout: code
-     # - ls:
+     - checkout: code
+     - ls:
