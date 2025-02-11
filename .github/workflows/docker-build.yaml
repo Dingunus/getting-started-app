@@ -15,6 +15,6 @@ jobs:
        with:
          username: ${{ vars.DOCKERHUB_USERNAME }}
          password: ${{ secrets.DOCKERHUB_TOKEN }}
-     - run: docker tag getting-started dingunus/getting-started
+     - run: docker tag getting-started dingunus/getting-started:${{ steps.version.outputs.version }}
      - run: docker push dingunus/getting-started
      
