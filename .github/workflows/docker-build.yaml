@@ -22,5 +22,5 @@ jobs:
          scheme: semver
          increment: patch
      - run: docker tag getting-started dingunus/getting-started:${{ steps.version.outputs.version }}
-     - run: docker push dingunus/getting-started
+     - run: docker push dingunus/getting-started:${{ steps.version.outputs.version }}
      
