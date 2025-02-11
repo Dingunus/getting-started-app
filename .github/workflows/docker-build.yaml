@@ -5,5 +5,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
      - run: ls
-     - run: checkout code
+     - name: Check out repository code
+       uses: actions/checkout@v4
      - run: ls
