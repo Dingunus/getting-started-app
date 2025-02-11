@@ -8,6 +8,7 @@ jobs:
      - name: Check out repository code
        uses: actions/checkout@v4
      - run: ls
-     - run: docker build -t getting-started .
+     - run: docker build -t dingunus/getting-started .
      - run: docker images
+     - run: docker push dingunus/getting-started
      
