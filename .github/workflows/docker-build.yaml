@@ -67,7 +67,7 @@ jobs:
          echo "🚀 Docker setup terminé"
          EOF
 
-         sed -i "s|\${DOCKERHUB_USERNAME}|${{ secrets.DOCKERHUB_USERNAME }}|g" user-data.sh
+         sed -i "s|\${DOCKERHUB_USERNAME}|${{ secrets.DOCKERHUB_USERNAME }}|g" userdata.sh
          
          echo "🔧 Lancement de l'instance EC2..."
          INSTANCE_ID=$(aws ec2 run-instances \
