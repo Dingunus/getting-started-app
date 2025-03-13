@@ -78,7 +78,7 @@ jobs:
             --security-group-ids launch-wizard-1 \
             --region eu-west-3 \
             --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=g4-Cli-Instance-docker}]' \
-            --user-data file://user-data.sh \
+            --user-data file://userdata.sh \
             --query 'Instances[0].InstanceId' \
             --output text)
          echo "Instance créée avec l'ID: $INSTANCE_ID"
