@@ -29,21 +29,27 @@ jobs:
      - run: docker tag getting-started dingunus/getting-started:${{ steps.version.outputs.version }}
      - run: docker push dingunus/getting-started:${{ steps.version.outputs.version }}
      - name: Configure AWS credentials
-       uses: aws-actions/configure-aws-credentials@v3
+       uses: aws-actions/configure-aws-credentials@v1
        with:
          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
          aws-region: eu-west-3
      - name: Create EC2 Instance 
        run: |
-         echo '#!/bin/bash
-             exec > /var/log/user-data.log 2>&1
-             set -x
-             sudo yum update -y
-             sudo yum install docker
-             sudo docker pull dingunus/getting-started:0.0.2
-             sudo docker run -p 3000:3000 dingunus/getting-started:0.0.2
-             sudo docker ps' > userdata.sh
+         cat > userdata.sh << 'EOF'
+          #!/bin/bash
+          exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
+          yum update -y
+          amazon-linux-extras install docker -y
+          systemctl start docker
+          systemctl enable docker
+          usermod -aG docker ec2-user
+          echo "Attente que Docker soit prêt"
+          sleep 20
+          sudo docker pull dingunus/getting-started:0.0.2
+          sudo docker run -p 3000:3000 dingunus/getting-started:0.0.2
+          sudo docker ps
+          EOF
          aws ec2 run-instances \
            --image-id ami-0fcc1d7ed380d3549 \
            --instance-type t2.micro \
@@ -51,6 +57,9 @@ jobs:
            --key-name g4  \
            --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=g4-Cli-Instance-docker}]" \
            --count 1 \
-           --user-data file://userdata.sh
+           --user-data file://userdata.sh \
+           --output text
+
+         echo "Déploiement terminée :)"
              
      
