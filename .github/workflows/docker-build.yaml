@@ -28,28 +28,44 @@ jobs:
          increment: patch
      - run: docker tag getting-started dingunus/getting-started:${{ steps.version.outputs.version }}
      - run: docker push dingunus/getting-started:${{ steps.version.outputs.version }}
+
      - name: Configure AWS credentials
        uses: aws-actions/configure-aws-credentials@v1
        with:
          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
          aws-region: eu-west-3
+
      - name: Create EC2 Instance 
        run: |
          cat > userdata.sh << 'EOF'
           #!/bin/bash
-          exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
+          exec > >(tee /var/log/user-data.log | logger -t user-data -s 2>/dev/console) 2>&1
+          
+          echo "🔄 Mise à jour du système..."
           yum update -y
-          amazon-linux-extras install docker -y
+          
+          echo "🛠 Installation de Docker..."
+          amazon-linux-extras enable docker
+          yum install -y docker
           systemctl start docker
           systemctl enable docker
           usermod -aG docker ec2-user
-          echo "Attente que Docker soit prêt"
+          
+          echo "⏳ Attente que Docker soit prêt..."
           sleep 20
-          sudo docker pull dingunus/getting-started:0.0.2
-          sudo docker run -p 3000:3000 dingunus/getting-started:0.0.2
-          sudo docker ps
-          EOF
+
+          echo "📦 Récupération et lancement du conteneur Docker..."
+          docker pull dingunus/getting-started:0.0.2
+          docker run -d -p 3000:3000 dingunus/getting-started:0.0.2
+          
+          echo "✅ Vérification des conteneurs actifs"
+          docker ps
+
+          echo "🚀 Docker setup terminé"
+         EOF
+         
+         echo "🔧 Lancement de l'instance EC2..."
          aws ec2 run-instances \
            --image-id ami-0fcc1d7ed380d3549 \
            --instance-type t2.micro \
@@ -60,6 +76,4 @@ jobs:
            --user-data file://userdata.sh \
            --output text
 
-         echo "Déploiement terminée :)"
-             
-     
+         echo "🎉 Déploiement terminé :)"
