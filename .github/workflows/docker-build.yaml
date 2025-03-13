@@ -34,5 +34,24 @@ jobs:
          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
          aws-region: eu-west-3
-     - run: aws ec2 run-instances --image-id ami-0fcc1d7ed380d3549 --instance-type t2.micro --security-group-ids launch-wizard-1 --key-name g4  --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=g4-Cli-Instance-docker}]" --count 1 --user-data "#!/bin/bash\nexec > /var/log/user-data.log 2>&1\nset -x\nsudo yum update -y\nsudo yum install docker\nsudo docker pull dingunus/getting-started:0.0.2\nsudo docker run -p 3000:3000 dingunus/getting-started:0.0.2\nsudo docker ps"
+     - name: Create EC2 Instance 
+       run: |
+         aws ec2 run-instances \
+           --image-id ami-0fcc1d7ed380d3549 \
+           --instance-type t2.micro \
+           --security-group-ids launch-wizard-1 \
+           --key-name g4  \
+           --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=g4-Cli-Instance-docker}]" \
+           --count 1 \
+           --user-data "$(cat << 'EOF' 
+             #!/bin/bash
+             exec > /var/log/user-data.log 2>&1
+             set -x
+             sudo yum update -y
+             sudo yum install docker
+             sudo docker pull dingunus/getting-started:0.0.2
+             sudo docker run -p 3000:3000 dingunus/getting-started:0.0.2
+             sudo docker ps
+             EOF
+                     )"
      
