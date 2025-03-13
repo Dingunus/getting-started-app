@@ -28,4 +28,5 @@ jobs:
          increment: patch
      - run: docker tag getting-started dingunus/getting-started:${{ steps.version.outputs.version }}
      - run: docker push dingunus/getting-started:${{ steps.version.outputs.version }}
+     - run: aws ec2 run-instance --image-id ami-0fcc1d7ed380d3549 --instance-type t2.micro --security-group-ids launch-wizard-1 --key-name g4  --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=g4-Cli-Instance-docker}]" --count 1 --user-data "#!/bin/bash\nsudo yum update -y\nsudo yum install docker\nsudo docker pull dingunus/getting-started:0.0.2\nsudo docker run -p 3000:3000 dingunus/getting-started:0.0.2\nsudo docker ps"
      
