@@ -28,7 +28,10 @@ jobs:
          increment: patch
      - run: docker tag getting-started dingunus/getting-started:${{ steps.version.outputs.version }}
      - run: docker push dingunus/getting-started:${{ steps.version.outputs.version }}
-
+  deploy:
+    needs: build-docker-image
+    runs-on: ubuntu-latest
+    steps:
      - name: Configure AWS credentials
        uses: aws-actions/configure-aws-credentials@v1
        with:
@@ -38,42 +41,51 @@ jobs:
 
      - name: Create EC2 Instance 
        run: |
+         # Création du script user-data
          cat > userdata.sh << 'EOF'
-          #!/bin/bash
-          exec > >(tee /var/log/user-data.log | logger -t user-data -s 2>/dev/console) 2>&1
+         #!/bin/bash
+         # Redirection des logs pour le débogage
+         exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
+         echo "🔄 Mise à jour du système..."
+         yum update -y
+         
+         echo "🛠 Installation de Docker..."
+         amazon-linux-extras install docker -y
+         systemctl start docker
+         systemctl enable docker
+         usermod -aG docker ec2-user
+         
+         echo "⏳ Attente que Docker soit prêt..."
+         sleep 20
+         echo "📦 Récupération et lancement du conteneur Docker..."
+         docker pull ${DOCKERHUB_USERNAME}/getting-started:0.0.2
+         docker run -d -p 3000:3000 ${DOCKERHUB_USERNAME}/getting-started:0.0.2 --restart always
           
-          echo "🔄 Mise à jour du système..."
-          yum update -y
-          
-          echo "🛠 Installation de Docker..."
-          amazon-linux-extras enable docker
-          yum install -y docker
-          systemctl start docker
-          systemctl enable docker
-          usermod -aG docker ec2-user
-          
-          echo "⏳ Attente que Docker soit prêt..."
-          sleep 20
+         echo "✅ Vérification des conteneurs actifs"
+         docker ps
 
-          echo "📦 Récupération et lancement du conteneur Docker..."
-          docker pull dingunus/getting-started:0.0.2
-          docker run -d -p 3000:3000 dingunus/getting-started:0.0.2
-          
-          echo "✅ Vérification des conteneurs actifs"
-          docker ps
-
-          echo "🚀 Docker setup terminé"
+         echo "🚀 Docker setup terminé"
          EOF
+
+         sed -i "s|\${DOCKERHUB_USERNAME}|${{ secrets.DOCKERHUB_USERNAME }}|g" user-data.sh
          
          echo "🔧 Lancement de l'instance EC2..."
-         aws ec2 run-instances \
-           --image-id ami-0fcc1d7ed380d3549 \
-           --instance-type t2.micro \
-           --security-group-ids launch-wizard-1 \
-           --key-name g4  \
-           --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=g4-Cli-Instance-docker}]" \
-           --count 1 \
-           --user-data file://userdata.sh \
-           --output text
+         INSTANCE_ID=$(aws ec2 run-instances \
+            --image-id ami-0fcc1d7ed380d3549 \
+            --count 1 \
+            --instance-type t2.micro \
+            --key-name g4 \
+            --security-group-ids launch-wizard-1 \
+            --region eu-west-3 \
+            --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=g4-Cli-Instance-docker}]' \
+            --user-data file://user-data.sh \
+            --query 'Instances[0].InstanceId' \
+            --output text)
+         echo "Instance créée avec l'ID: $INSTANCE_ID"
+          
+         # Attente que l'instance soit prête
+         echo "Attente du démarrage de l'instance..."
+         aws ec2 wait instance-status-ok --instance-ids $INSTANCE_ID
+          
 
          echo "🎉 Déploiement terminé :)"
